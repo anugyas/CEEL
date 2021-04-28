@@ -1,0 +1,49 @@
+ SELECT ce.subject_id
+  , ce.stay_id
+  , ce.charttime
+,AVG(case when itemid in (50802) and valuenum > 0 then valuenum else valuenum end) as FiO2
+  , AVG(case when itemid in (50816) and valuenum > 0 and valuenum < 300 then valuenum else null end) as FiO2
+   , AVG(case when itemid in (50820) and valuenum > 0 and valuenum < 300 then valuenum else null end) as pH
+   , AVG(case when itemid in (50878) and valuenum > 0 and valuenum < 300 then valuenum else null end) as AST
+  , AVG(case when itemid in (50863) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Alkalinephos
+   , AVG(case when itemid in (50893) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Calcium
+   , AVG(case when itemid in (50902) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Chloride
+  , AVG(case when itemid in (51082) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Creatinine 
+   , AVG(case when itemid in (50885) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Bilirubin_total
+   , AVG(case when itemid in (50931) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Glucose
+  , AVG(case when itemid in (50813) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Lactate
+   , AVG(case when itemid in (50960) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Magnesium
+   , AVG(case when itemid in (50970) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Phosphate 
+   , AVG(case when itemid in (50971) and valuenum > 0 and valuenum < 300 then valuenum else null end) as potassium
+   , AVG(case when itemid in (51003) and valuenum > 0 and valuenum < 300 then valuenum else null end) as troponinT
+   , AVG(case when itemid in (51275) and valuenum > 0 and valuenum < 300 then valuenum else null end) as PTT
+   , AVG(case when itemid in (51265) and valuenum > 0 and valuenum < 300 then valuenum else null end) as Platelets
+   FROM physionet-data.mimic_icu.chartevents ce
+  where ce.stay_id IS NOT NULL
+  and ce.itemid in
+  (
+    50802, -- Base Excess
+    51265, -- ART BP Systolic
+    51275, -- ART BP Diastolic
+    51003, -- ART BP Mean
+    50971, -- Arterial Blood Pressure systolic
+    50970, -- Arterial Blood Pressure diastolic
+    50960, -- Arterial Blood Pressure mean
+    50813, -- Non Invasive Blood Pressure systolic
+    50931, -- Non Invasive Blood Pressure diastolic
+    50885, -- Non Invasive Blood Pressure mean
+    51082, -- Respiratory Rate
+    50902, -- Respiratory Rate (Total)
+    50893, -- SPO2, peripheral
+    -- GLUCOSE, both lab and fingerstick
+    50863, -- Glucose finger stick
+    50878, -- Glucose (serum)
+    50820, -- Glucose (whole blood)
+    -- TEMPERATURE
+    50816, -- "Temperature Celsius"
+    50802,  -- "Temperature Fahrenheit"
+    224642 -- Temperature Site
+    -- 226329 -- Blood Temperature CCO (C)
+)
+group by ce.subject_id, ce.stay_id, ce.charttime
+;
