@@ -33,7 +33,7 @@ WITH sofa AS
 )
 , s1 as
 (
-  SELECT
+  SELECT 
     soi.subject_id
     , soi.stay_id
     -- suspicion columns
@@ -64,7 +64,7 @@ WITH sofa AS
     -- All rows have an associated suspicion of infection event
     -- Therefore, Sepsis-3 is defined as SOFA >= 2.
     -- Implicitly, the baseline SOFA score is assumed to be zero, as we do not know
-    -- if the patient has preexisting (acute or chronic) organ dysfunction
+    -- if the patient has preexisting (acute or chronic) organ dysfunction 
     -- before the onset of infection.
     , sofa_score >= 2 and suspected_infection = 1 as sepsis3
     -- subselect to the earliest suspicion/antibiotic/SOFA row
@@ -75,14 +75,14 @@ WITH sofa AS
     ) AS rn_sus
   FROM `physionet-data.mimic_derived.suspicion_of_infection` as soi
   INNER JOIN sofa
-    ON soi.stay_id = sofa.stay_id
+    ON soi.stay_id = sofa.stay_id 
     AND sofa.endtime >= DATETIME_SUB(soi.suspected_infection_time, INTERVAL 48 HOUR)
     AND sofa.endtime <= DATETIME_ADD(soi.suspected_infection_time, INTERVAL 24 HOUR)
   -- only include in-ICU rows
   WHERE soi.stay_id is not null
 )
 , s2 as
-(SELECT
+(SELECT 
 s1.subject_id, stay_id
 -- note: there may be more than one antibiotic given at this time
 , antibiotic_time
@@ -147,7 +147,7 @@ WHERE rn_sus = 1)
 , patient_vitals.glucose
 , patient_vitals.spo2
 , patient_vitals.resp_rate
-, patient_vitals.charttime
+, patient_vitals.charttime 
 , ROW_NUMBER() OVER
     (
         PARTITION BY patient_vitals.stay_id
@@ -156,10 +156,40 @@ WHERE rn_sus = 1)
  FROM s2 left join `physionet-data.mimic_derived.vitalsign` as patient_vitals on s2.subject_id = patient_vitals.subject_id and s2.stay_id = patient_vitals.stay_id and patient_vitals.charttime <= s2.sofa_time )
 , s4 as
 (SELECT *
-, ROW_NUMBER() OVER
+, ROW_NUMBER() OVER 
 (
   PARTITION BY subject_id
   ORDER BY sofa_time desc
-) AS rn_sofa_stay
+) AS rn_sofa_stay 
 FROM s3 WHERE rn_charttime = 1)
-SELECT * FROM s4 WHERE rn_sofa_stay = 1
+, s5 as
+(SELECT * FROM s4 WHERE rn_sofa_stay = 1)
+, s6 as
+(SELECT ie.subject_id, ie.hadm_id, ie.stay_id
+-- patient level factors
+, pat.gender
+-- hospital level factors
+, adm.admittime, adm.dischtime
+, DATETIME_DIFF(adm.dischtime, adm.admittime, DAY) as los_hospital
+, DATETIME_DIFF(adm.admittime, DATETIME(pat.anchor_year, 1, 1, 0, 0, 0), YEAR) + pat.anchor_age as admission_age
+, DENSE_RANK() OVER (PARTITION BY adm.subject_id ORDER BY adm.admittime) AS hospstay_seq
+, CASE
+    WHEN DENSE_RANK() OVER (PARTITION BY adm.subject_id ORDER BY adm.admittime) = 1 THEN True
+    ELSE False END AS first_hosp_stay
+
+-- icu level factors
+, ROUND(DATETIME_DIFF(ie.outtime, ie.intime, HOUR)/24.0, 2) as ICULOS
+, DENSE_RANK() OVER (PARTITION BY ie.hadm_id ORDER BY ie.intime) AS icustay_seq
+
+-- first ICU stay for the current hospitalization
+, CASE
+    WHEN DENSE_RANK() OVER (PARTITION BY ie.hadm_id ORDER BY ie.intime) = 1 THEN True
+    ELSE False END AS first_icu_stay
+
+FROM physionet-data.mimic_icu.icustays ie
+INNER JOIN physionet-data.mimic_core.admissions adm
+    ON ie.hadm_id = adm.hadm_id
+INNER JOIN physionet-data.mimic_core.patients pat
+    ON ie.subject_id = pat.subject_id
+)
+SELECT * FROM s5 left join s6 on s5.subject_id = s6.subject_id and s5.stay_id = s6.stay_id
