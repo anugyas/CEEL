@@ -1,3 +1,4 @@
+-- This computes the average of vital signs for each stay_id of a subject.
 SELECT patient_vitals.subject_id
 , patient_vitals.stay_id
 , AVG(patient_vitals.heart_rate) as heart_rate_avg

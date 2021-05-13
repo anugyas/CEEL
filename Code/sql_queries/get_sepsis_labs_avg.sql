@@ -1,3 +1,4 @@
+-- This computes the average of lab values that are used in the computation of sofa score, for each stay_id of a subject.
 WITH sofa AS
 (
   SELECT stay_id

@@ -1,10 +1,10 @@
+-- This is a modified version of the sepsis3.sql query that can be found here: https://github.com/MIT-LCP/mimic-iv/blob/master/concepts/sepsis/sepsis3.sql
+-- Our modifications add vital signs as well as some patient demographic information about the patients.
+-- We take the latest stay_id for a particular subject_id i.e. patient.
 -- Creates a table with "onset" time of Sepsis-3 in the ICU.
 -- That is, the earliest time at which a patient had SOFA >= 2 and suspicion of infection.
 -- As many variables used in SOFA are only collected in the ICU, this query can only
 -- define sepsis-3 onset within the ICU.
-
--- extract rows with SOFA >= 2
--- implicitly this assumes baseline SOFA was 0 before ICU admission.
 WITH sofa AS
 (
   SELECT stay_id
