@@ -1,4 +1,4 @@
-# Repository for the Causal Effect Estimation using LODE project for ML-2565 
+# Causal Effect Estimation using LODE for ML-2565 
 
 SQL Queries modified from https://github.com/MIT-LCP/mimic-iv
 
